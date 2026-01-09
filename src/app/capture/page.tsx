@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
-import { Upload, Camera, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Upload, Camera, ArrowLeft, Loader2, Sparkles, Plus } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
@@ -128,41 +128,48 @@ export default function CapturePage() {
 
     return (
         <div className="max-w-md mx-auto px-4 py-8 min-h-screen flex flex-col">
-            <div className="flex items-center gap-4 mb-4">
-                <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-full">
+            <div className="flex items-center gap-4 mb-6">
+                <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-full transition-colors">
                     <ArrowLeft className="h-6 w-6" />
                 </Link>
-                <h1 className="text-2xl font-bold">New Lecture</h1>
+                <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                    New Lecture
+                </h1>
             </div>
 
             <div className="flex-1 flex flex-col gap-6">
                 {/* Horizontal Scroll List of Images */}
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                <div className="
+                    flex gap-4 overflow-x-auto pb-4 snap-x
+                    scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent
+                ">
                     {previews.map((src, idx) => (
-                        <div key={idx} className="relative flex-shrink-0 w-64 aspect-[3/4] rounded-2xl overflow-hidden border border-gray-700 shadow-xl snap-center group">
+                        <div key={idx} className="relative flex-shrink-0 w-64 aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 shadow-xl snap-center group">
                             <img src={src} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
                             {!loading && (
                                 <button
                                     onClick={() => removeImage(idx)}
-                                    className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white rounded-full p-1 transition-colors"
+                                    className="absolute top-2 right-2 bg-black/60 backdrop-blur-md hover:bg-red-500/80 text-white rounded-full p-2 transition-all opacity-0 group-hover:opacity-100"
                                 >
                                     <ArrowLeft className="h-4 w-4 rotate-45" /> {/* X icon workaround */}
                                 </button>
                             )}
-                            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded-md text-xs font-bold">
+                            <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold border border-white/10">
                                 Page {idx + 1}
                             </div>
                         </div>
                     ))}
 
-                    {/* Add Button (Visible if we have images, or empty state below) */}
+                    {/* Add Button (Small) */}
                     {previews.length > 0 && !loading && (
                         <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex-shrink-0 w-24 aspect-[3/4] border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all"
+                            className="flex-shrink-0 w-24 aspect-[3/4] border border-dashed border-white/20 hover:border-blue-400/50 hover:bg-blue-500/5 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group active:scale-95"
                         >
-                            <Camera className="h-6 w-6 text-gray-400" />
-                            <span className="text-xs text-gray-500 mt-2">Add Page</span>
+                            <div className="bg-white/5 p-3 rounded-full group-hover:bg-blue-500/20 transition-colors mb-2">
+                                <Plus className="h-5 w-5 text-gray-400 group-hover:text-blue-400" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-500 group-hover:text-blue-400">Add Page</span>
                         </div>
                     )}
                 </div>
@@ -171,12 +178,18 @@ export default function CapturePage() {
                 {previews.length === 0 && (
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full flex-1 border-2 border-dashed border-gray-700 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all group min-h-[400px]"
+                        className="w-full flex-1 border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-6 cursor-pointer hover:border-blue-500/50 hover:bg-gradient-to-br hover:from-blue-500/5 hover:to-transparent transition-all group min-h-[400px] relative overflow-hidden"
                     >
-                        <div className="bg-gray-800 p-4 rounded-full group-hover:bg-blue-500/20 transition-colors">
-                            <Camera className="h-8 w-8 text-gray-400 group-hover:text-blue-400" />
+                        <div className="absolute inset-0 bg-grid-white/[0.02] mask-image-linear-gradient(to-bottom,transparent,black)" />
+
+                        <div className="relative z-10 bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl shadow-2xl border border-white/5 group-hover:scale-110 transition-transform duration-500">
+                            <Camera className="h-10 w-10 text-gray-300 group-hover:text-blue-400 transition-colors" />
                         </div>
-                        <p className="text-gray-400 font-medium group-hover:text-blue-400">Tap to take photo</p>
+
+                        <div className="relative z-10 text-center">
+                            <h3 className="text-xl font-semibold mb-2 group-hover:text-blue-400 transition-colors">Capture Lecture</h3>
+                            <p className="text-gray-500 text-sm max-w-[200px]">Tap to take a photo of slides or whiteboard</p>
+                        </div>
                     </div>
                 )}
 
@@ -191,20 +204,20 @@ export default function CapturePage() {
 
                 {/* Controls */}
                 {previews.length > 0 && (
-                    <div className="mt-auto">
+                    <div className="mt-auto animate-in slide-in-from-bottom-4 duration-500">
                         {loading ? (
-                            <div className="bg-white/5 rounded-2xl p-6 text-center border border-white/10">
+                            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/10 shadow-2xl">
                                 <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-3" />
-                                <p className="font-bold">{status}</p>
-                                <p className="text-xs text-gray-400 mt-1">Processing {previews.length} page(s)...</p>
+                                <p className="font-bold text-lg">{status}</p>
+                                <p className="text-xs text-blue-300/70 mt-1 uppercase tracking-wider">Processing {previews.length} page(s)...</p>
                             </div>
                         ) : (
                             <button
                                 onClick={processImage}
-                                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all"
+                                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-blue-900/40 hover:shadow-blue-900/60 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
                             >
                                 <Sparkles className="h-5 w-5" />
-                                Generate Notes ({previews.length} Pages)
+                                Generate Notes ({previews.length})
                             </button>
                         )}
                     </div>
