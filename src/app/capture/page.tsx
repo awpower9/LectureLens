@@ -104,7 +104,13 @@ export default function CapturePage() {
             setStatus("Analyzing with Gemini AI...");
             try {
                 // previews contains base64 strings
-                const aiData = await generateLectureNotes(previews);
+                const aiResponse = await generateLectureNotes(previews);
+
+                if (!aiResponse.success || !aiResponse.data) {
+                    throw new Error(aiResponse.error || "Unknown AI Error");
+                }
+
+                const aiData = aiResponse.data;
 
                 // 3. Save to Firestore
                 setStatus("Saving notes...");
@@ -123,7 +129,7 @@ export default function CapturePage() {
                 // Alert the nice underlying error if possible
                 const msg = aiError.message.replace("AI Generation Failed: ", "");
                 alert(`AI Error: ${msg}`);
-                throw aiError;
+                // Don't re-throw to avoid crashing the boundary
             }
 
         } catch (error: any) {
