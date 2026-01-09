@@ -3,10 +3,11 @@ export interface Lecture {
     userId: string;
     title: string;
     subject: string;
-    createdAt: any; // Firestore Timestamp or Date
-    imageUrl: string;
     summary: string;
     keyPoints: string[];
+    imageUrl: string;
+    imageUrls?: string[]; // Multiple images support
+    createdAt: any; // Firestore Timestamp or Date
     quiz: QuizQuestion[];
 }
 

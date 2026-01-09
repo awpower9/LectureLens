@@ -13,8 +13,8 @@ export default function CapturePage() {
     const { user } = useAuth();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [image, setImage] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
+    const [images, setImages] = useState<File[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
 
@@ -47,48 +47,59 @@ export default function CapturePage() {
         if (e.target.files && e.target.files[0]) {
             setStatus("Compressing image...");
             const file = e.target.files[0];
-            setImage(file);
 
             const compressedDataUrl = await compressImage(file);
-            setPreview(compressedDataUrl);
+
+            // Append to arrays
+            setImages(prev => [...prev, file]);
+            setPreviews(prev => [...prev, compressedDataUrl]);
+
             setStatus(""); // Clear status
         }
     };
 
+    const removeImage = (index: number) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
     const processImage = async () => {
-        if (!image || !user || !preview) return;
+        if (images.length === 0 || !user) return;
 
         try {
             setLoading(true);
 
-            // 1. Upload to Firebase Storage
-            setStatus("Uploading image...");
-            const storageRef = ref(storage, `lectures/${user.uid}/${Date.now()}_${image.name}`);
-            let imageUrl = "";
+            // 1. Upload ALL to Firebase Storage
+            setStatus("Uploading images...");
+            const imageUrls: string[] = [];
+
             try {
-                await uploadBytes(storageRef, image);
-                imageUrl = await getDownloadURL(storageRef);
+                for (const img of images) {
+                    const storageRef = ref(storage, `lectures/${user.uid}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${img.name}`);
+                    await uploadBytes(storageRef, img);
+                    const url = await getDownloadURL(storageRef);
+                    imageUrls.push(url);
+                }
             } catch (storageError: any) {
                 console.error("Storage Error:", storageError);
                 if (storageError.code === 'storage/unauthorized') {
-                    alert("Storage Permission Error:\n\nYou need to enable 'Firebase Storage' in your console.\n\nGo to Build -> Storage -> Get Started -> Start in Test Mode.");
-                } else if (storageError.code === 'storage/object-not-found' || storageError.code === 'storage/bucket-not-found') {
-                    alert("Storage Bucket Error:\n\nCheck your .env.local file. Your NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET might be wrong or the Storage service isn't enabled.");
+                    alert("Storage Permission Error: Enable Firebase Storage in Test Mode.");
                 }
                 throw new Error("Storage upload failed");
             }
 
-            // 2. Process with Gemini (Server Action)
+            // 2. Process with Gemini (Server Action) - Pass Array
             setStatus("Analyzing with Gemini AI...");
             try {
-                // preview is the base64 string
-                const aiData = await generateLectureNotes(preview);
+                // previews contains base64 strings
+                const aiData = await generateLectureNotes(previews);
 
                 // 3. Save to Firestore
                 setStatus("Saving notes...");
                 const docRef = await addDoc(collection(db, "lectures"), {
                     userId: user.uid,
-                    imageUrl,
+                    imageUrl: imageUrls[0], // Primary image for dashboard
+                    imageUrls: imageUrls,   // All images
                     ...aiData,
                     createdAt: serverTimestamp(),
                 });
@@ -106,11 +117,10 @@ export default function CapturePage() {
         } catch (error: any) {
             console.error("Error processing lecture:", error);
 
-            // Explicitly catch Firestore permission errors that bubble up
             if (error.code === 'permission-denied' || error.message?.includes("Missing or insufficient permissions")) {
-                alert("🔥 Database Permission Error 🔥\n\nYour Firestore Database Rules are blocking me from saving the notes!\n\nFIX:\n1. Go to Firebase Console -> Build -> Firestore Database -> Rules\n2. Change 'allow read, write: if false;' to 'allow read, write;'\n(Or simpler: click 'Rules' -> 'Edit Rules' -> Change to allow all)");
+                alert("🔥 Database Permission Error 🔥 Fix Firestore Rules!");
             } else {
-                setStatus("Error processing image. Please try again.");
+                setStatus("Error processing. Please try again.");
             }
             setLoading(false);
         }
@@ -118,59 +128,84 @@ export default function CapturePage() {
 
     return (
         <div className="max-w-md mx-auto px-4 py-8 min-h-screen flex flex-col">
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 mb-4">
                 <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-full">
                     <ArrowLeft className="h-6 w-6" />
                 </Link>
                 <h1 className="text-2xl font-bold">New Lecture</h1>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center gap-8">
-                {!preview ? (
+            <div className="flex-1 flex flex-col gap-6">
+                {/* Horizontal Scroll List of Images */}
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                    {previews.map((src, idx) => (
+                        <div key={idx} className="relative flex-shrink-0 w-64 aspect-[3/4] rounded-2xl overflow-hidden border border-gray-700 shadow-xl snap-center group">
+                            <img src={src} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
+                            {!loading && (
+                                <button
+                                    onClick={() => removeImage(idx)}
+                                    className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white rounded-full p-1 transition-colors"
+                                >
+                                    <ArrowLeft className="h-4 w-4 rotate-45" /> {/* X icon workaround */}
+                                </button>
+                            )}
+                            <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded-md text-xs font-bold">
+                                Page {idx + 1}
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Add Button (Visible if we have images, or empty state below) */}
+                    {previews.length > 0 && !loading && (
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex-shrink-0 w-24 aspect-[3/4] border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all"
+                        >
+                            <Camera className="h-6 w-6 text-gray-400" />
+                            <span className="text-xs text-gray-500 mt-2">Add Page</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Empty State / Main Add Button */}
+                {previews.length === 0 && (
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full aspect-[3/4] border-2 border-dashed border-gray-700 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all group"
+                        className="w-full flex-1 border-2 border-dashed border-gray-700 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all group min-h-[400px]"
                     >
                         <div className="bg-gray-800 p-4 rounded-full group-hover:bg-blue-500/20 transition-colors">
                             <Camera className="h-8 w-8 text-gray-400 group-hover:text-blue-400" />
                         </div>
                         <p className="text-gray-400 font-medium group-hover:text-blue-400">Tap to take photo</p>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={handleImageSelect}
-                        />
                     </div>
-                ) : (
-                    <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden border border-gray-700 shadow-2xl">
-                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                )}
 
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                />
+
+                {/* Controls */}
+                {previews.length > 0 && (
+                    <div className="mt-auto">
                         {loading ? (
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                                <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
-                                <p className="text-xl font-bold">{status}</p>
-                                <p className="text-sm text-gray-400 mt-2">This may take a few seconds...</p>
+                            <div className="bg-white/5 rounded-2xl p-6 text-center border border-white/10">
+                                <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-3" />
+                                <p className="font-bold">{status}</p>
+                                <p className="text-xs text-gray-400 mt-1">Processing {previews.length} page(s)...</p>
                             </div>
                         ) : (
-                            <div className="absolute bottom-0 left-0 right-0 p-6 flex gap-4">
-                                <button
-                                    onClick={() => { setPreview(null); setImage(null); }}
-                                    className="flex-1 bg-white/10 backdrop-blur-md text-white py-4 rounded-xl font-semibold hover:bg-white/20"
-                                >
-                                    Retake
-                                </button>
-                                <button
-                                    onClick={processImage}
-                                    className="flex-[2] bg-blue-600 text-white py-4 rounded-xl font-semibold hover:bg-blue-700 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
-                                >
-                                    <Sparkles className="h-5 w-5" />
-                                    Generate Notes
-                                </button>
-                            </div>
+                            <button
+                                onClick={processImage}
+                                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all"
+                            >
+                                <Sparkles className="h-5 w-5" />
+                                Generate Notes ({previews.length} Pages)
+                            </button>
                         )}
                     </div>
                 )}

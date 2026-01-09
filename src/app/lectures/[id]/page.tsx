@@ -140,10 +140,20 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                         </div>
 
                         {/* Original Image Accordion/Preview could be added here */}
+                        {/* Original Images */}
                         <div className="mt-8">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Original Capture</h3>
-                            <div className="rounded-xl overflow-hidden max-w-sm">
-                                <img src={lecture.imageUrl} alt="Original" className="w-full" />
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Original Capture ({lecture.imageUrls?.length || 1} Pages)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {(lecture.imageUrls || [lecture.imageUrl]).map((url, idx) => (
+                                    <div key={idx} className="rounded-xl overflow-hidden border border-white/10 group relative">
+                                        <img src={url} alt={`Page ${idx + 1}`} className="w-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-white text-sm font-medium hover:underline">
+                                                View Full Size
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

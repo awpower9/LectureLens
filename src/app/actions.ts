@@ -6,7 +6,8 @@ const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const prompt = `
-  Analyze this image of a lecture whiteboard or slide. 
+  Analyze the provided image(s) of a lecture whiteboard or slide. 
+  If multiple images are provided, treat them as sequential pages/slides of the same lecture.
   Extract the educational content and structure it into a JSON object.
   The JSON structure should be:
   {
@@ -25,16 +26,28 @@ const prompt = `
   Do not include markdown formatting or backticks in the response, just the raw JSON string.
 `;
 
-export async function generateLectureNotes(imageBase64: string) {
+export async function generateLectureNotes(imagesBase64: string | string[]) {
   if (!apiKey) throw new Error("Gemini API Key is missing");
 
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+  // Ensure array
+  const imageList = Array.isArray(imagesBase64) ? imagesBase64 : [imagesBase64];
+  const parts: any[] = [{ text: prompt }];
+
+  imageList.forEach((img) => {
+    const base64Data = img.replace(/^data:image\/\w+;base64,/, "");
+    parts.push({
+      inlineData: {
+        data: base64Data,
+        mimeType: "image/jpeg",
+      },
+    });
+  });
 
   // Fallback order: Flash (Fastest) -> Pro (Smarter) -> Pro Vision (Legacy/Stable)
   //, "gemini-1.5-pro-001" , "gemini-1.5-flash-001"
   //"gemini-pro-vision", "gemini-1.5-flash", "gemini-1.5-pro"
   // We use the specific versions to avoid alias 404s on some keys
-  const modelsToTry = ["gemini-2.0-flash"];
+  const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
   let lastError;
 
@@ -43,15 +56,7 @@ export async function generateLectureNotes(imageBase64: string) {
       console.log(`Trying model: ${modelName}`);
       const model = genAI.getGenerativeModel({ model: modelName });
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: "image/jpeg",
-          },
-        },
-      ]);
+      const result = await model.generateContent(parts);
 
       const response = await result.response;
       const text = response.text();
