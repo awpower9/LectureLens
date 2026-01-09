@@ -6,24 +6,30 @@ const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const prompt = `
-  Analyze the provided image(s) of a lecture whiteboard or slide. 
+  Analyze the provided image(s) of a lecture whiteboard or slide acting as an expert academic tutor.
   If multiple images are provided, treat them as sequential pages/slides of the same lecture.
+  
   Extract the educational content and structure it into a JSON object.
   The JSON structure should be:
   {
     "title": "A short, descriptive title",
     "subject": "The academic subject (e.g., Computer Science, Calculus, History)",
-    "summary": "A concise summary of the concepts shown (max 3 sentences)",
-    "keyPoints": ["Point 1", "Point 2", "Point 3", "Point 4"],
+    "summary": "A comprehensive, detailed summary of the lecture content. Explain the concepts thoroughly as if teaching a student. (Min 2 paragraphs)",
+    "keyPoints": ["Detailed Point 1", "Detailed Point 2", "Detailed Point 3", "Detailed Point 4", "Detailed Point 5"],
     "quiz": [
       {
-        "question": "A multiple choice question based on the content",
+        "question": "A challenging multiple choice question testing conceptual understanding",
         "options": ["Option A", "Option B", "Option C", "Option D"],
         "correctAnswer": 0 // Index of the correct option (0-3)
       }
     ]
   }
-  Do not include markdown formatting or backticks in the response, just the raw JSON string.
+
+  IMPORTANT REQUIREMENTS:
+  1. Generate AT LEAST 5 unique quiz questions.
+  2. The summary must be detailed and educational, not just a brief overview.
+  3. Key points should be substantive statements, not short phrases.
+  4. Do not include markdown formatting or backticks in the response, just the raw JSON string.
 `;
 
 export async function generateLectureNotes(imagesBase64: string | string[]) {
