@@ -44,19 +44,31 @@ export default function CapturePage() {
     };
 
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setStatus("Compressing image...");
-            const file = e.target.files[0];
+        if (e.target.files && e.target.files.length > 0) {
+            setStatus("Compressing images...");
+            const files = Array.from(e.target.files);
 
-            const compressedDataUrl = await compressImage(file);
-
-            // Append to arrays
-            setImages(prev => [...prev, file]);
-            setPreviews(prev => [...prev, compressedDataUrl]);
+            for (const file of files) {
+                const compressedDataUrl = await compressImage(file);
+                // Functional state update ensuring we append correctly
+                setImages(prev => [...prev, file]);
+                setPreviews(prev => [...prev, compressedDataUrl]);
+            }
 
             setStatus(""); // Clear status
         }
     };
+
+    // ... (render)
+
+    <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple // Allow multiple files
+        className="hidden"
+        onChange={handleImageSelect}
+    />
 
     const removeImage = (index: number) => {
         setImages(prev => prev.filter((_, i) => i !== index));
@@ -197,7 +209,7 @@ export default function CapturePage() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                    multiple
                     className="hidden"
                     onChange={handleImageSelect}
                 />
