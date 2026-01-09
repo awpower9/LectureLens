@@ -112,33 +112,35 @@ export default function Dashboard() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {lectures.map((lecture) => (
-                        <Link
+                        <div
                             key={lecture.id}
-                            href={`/lectures/${lecture.id}`}
-                            className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:bg-white/10 transition-all hover:scale-[1.02] group relative"
+                            className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:bg-white/10 transition-all hover:scale-[1.02] group relative block"
                         >
                             <div className="aspect-video relative bg-gray-800">
-                                <img
-                                    src={lecture.imageUrl}
-                                    alt={lecture.title}
-                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                <Link href={`/lectures/${lecture.id}`} className="block w-full h-full">
+                                    <img
+                                        src={lecture.imageUrl}
+                                        alt={lecture.title}
+                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                </Link>
 
-                                {/* Trash Button */}
+                                {/* Trash Button - Now sibling to Link, not child */}
                                 <button
                                     onClick={(e) => handleDelete(e, lecture.id)}
-                                    className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-red-500/80 text-white/70 hover:text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all z-10"
+                                    className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-red-500/80 text-white/70 hover:text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all z-10 cursor-pointer"
                                     title="Delete Lecture"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
 
-                                <div className="absolute bottom-3 left-3 right-3">
+                                <Link href={`/lectures/${lecture.id}`} className="absolute bottom-3 left-3 right-3 block">
                                     <h3 className="text-lg font-bold truncate text-white">{lecture.title}</h3>
-                                </div>
+                                </Link>
                             </div>
-                            <div className="p-4">
+
+                            <Link href={`/lectures/${lecture.id}`} className="block p-4">
                                 <div className="flex items-center justify-between text-sm text-gray-400 mb-2">
                                     <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-xs font-semibold">
                                         {lecture.subject}
@@ -153,8 +155,8 @@ export default function Dashboard() {
                                 <p className="text-gray-400 text-sm line-clamp-2">
                                     {lecture.summary}
                                 </p>
-                            </div>
-                        </Link>
+                            </Link>
+                        </div>
                     ))}
                 </div>
             )}
